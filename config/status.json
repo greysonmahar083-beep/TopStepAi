@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-11-08T12:00:00Z",
+  "equity": 69119.28,
+  "profit_target": 3000,
+  "remaining_mll": 2000,
+  "daily_loss_cap": 400,
+  "daily_loss_used": 0,
+  "trailing_dd": 0,
+  "killswitch_threshold": 1600,
+  "open_risk": 0,
+  "exposure_by_symbol": {},
+  "trade_count_today": 0,
+  "consecutive_losses": 0,
+  "session_timer": "09:30-16:00 ET",
+  "rules_status": {
+    "risk": "pass",
+    "hours": "pass",
+    "news_filter": "pass",
+    "scaling": "pass",
+    "connectivity": "pass"
+  },
+  "recent_breaches": [],
+  "auto_actions": []
+}

@@ -1,0 +1,39 @@
+# TopstepX API Configuration
+topstepx:
+  base_url: https://api.topstepx.com
+  user_hub: https://rtc.topstepx.com/hubs/user
+  market_hub: https://rtc.topstepx.com/hubs/market
+  username: ${TOPSTEPX_USERNAME}
+  api_key: ${TOPSTEPX_API_KEY}
+  session_ttl_hours: 24
+
+# Combine Targets and Risk Limits
+combine:
+  start_balance: 50000
+  profit_target: 3000
+  max_loss: 2000
+  daily_loss_cap: 400
+  trailing_dd_killswitch: 1600
+  per_trade_risk_bps_min: 10  # 0.10%
+  per_trade_risk_bps_max: 30  # 0.30%
+  open_risk_fraction_of_daily_cap: 0.30
+
+# Trading Rules
+rules:
+  trading_hours: "09:30-16:00 ET"  # Example; adjust per exchange
+  news_filter_minutes: 30
+  max_consecutive_losses: 5
+  auto_flat_on_session_end: true
+
+# Data and Models
+data:
+  historical_path: data/historical/
+  live_cache_path: data/live/
+  models_path: models/
+
+# Monitoring and Alerts
+monitoring:
+  dashboard_port: 8501
+  alerts_slack_webhook: ${ALERTS_SLACK_WEBHOOK}
+  alerts_email_to: ${ALERTS_EMAIL_TO}
+  status_file: config/status.json
