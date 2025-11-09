@@ -1,0 +1,86 @@
+name: nightly-data-refresh
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      TOPSTEPX_BASE_URL: ${{ secrets.TOPSTEPX_BASE_URL }}
+      TOPSTEPX_USER_HUB: ${{ secrets.TOPSTEPX_USER_HUB }}
+      TOPSTEPX_MARKET_HUB: ${{ secrets.TOPSTEPX_MARKET_HUB }}
+      TOPSTEPX_USERNAME: ${{ secrets.TOPSTEPX_USERNAME }}
+      TOPSTEPX_API_KEY: ${{ secrets.TOPSTEPX_API_KEY }}
+      ALERTS_SLACK_WEBHOOK: ${{ secrets.ALERTS_SLACK_WEBHOOK }}
+      ALERTS_EMAIL_TO: ${{ secrets.ALERTS_EMAIL_TO }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set default endpoints
+        run: |
+          if [ -z "${TOPSTEPX_BASE_URL}" ]; then
+            echo "TOPSTEPX_BASE_URL=https://api.topstepx.com" >> $GITHUB_ENV
+          fi
+          if [ -z "${TOPSTEPX_USER_HUB}" ]; then
+            echo "TOPSTEPX_USER_HUB=https://rtc.topstepx.com/hubs/user" >> $GITHUB_ENV
+          fi
+          if [ -z "${TOPSTEPX_MARKET_HUB}" ]; then
+            echo "TOPSTEPX_MARKET_HUB=https://rtc.topstepx.com/hubs/market" >> $GITHUB_ENV
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Check credentials
+        id: creds
+        run: |
+          missing=0
+          for var in TOPSTEPX_USERNAME TOPSTEPX_API_KEY; do
+            if [ -z "${!var}" ]; then
+              echo "Missing credential: $var" >> $GITHUB_STEP_SUMMARY
+              missing=1
+            fi
+          done
+          echo "missing=$missing" >> $GITHUB_OUTPUT
+
+      - name: Run data refresh
+        if: steps.creds.outputs.missing == '0'
+        run: python src/main.py
+
+      - name: Validate inventory snapshot
+        if: steps.creds.outputs.missing == '0'
+        run: python -m monitoring.inventory_validator --status config/status.json --config config/config.yaml
+
+      - name: Upload status artifact
+        if: steps.creds.outputs.missing == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-json
+          path: config/status.json
+
+      - name: Data refresh skipped summary
+        if: steps.creds.outputs.missing != '0'
+        run: echo 'Data refresh skipped because required credentials are not configured.'
+
+      - name: Run unit tests
+        run: python -m pytest

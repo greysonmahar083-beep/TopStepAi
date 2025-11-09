@@ -21,8 +21,7 @@ TopStepAi/
 ├── monitoring/            # Dashboards and alerts
 ├── gui/                   # GUI components (Streamlit)
 │   ├── dashboard.py      # Main dashboard
-│   ├── compliance_panel.py # Compliance details
-│   └── charts.py         # Annotated trading charts
+│   └── compliance_panel.py # Compliance details
 ├── backtesting/           # Backtesting engine
 ├── docs/                  # Documentation
 │   └── topstepx-gateway-api.md
@@ -38,7 +37,9 @@ TopStepAi/
 2. Install dependencies: `pip install -r requirements.txt`
 3. Copy `.env.example` to `.env` and fill in your TopstepX credentials and risk limits.
 4. Run the entry point: `python src/main.py` (will authenticate and show status).
-5. For development, use `pytest` in tests/ and `streamlit run gui/dashboard.py` for the dashboard.## Objective (Topstep Combine)
+5. For development, use `pytest` in tests/ and `streamlit run gui/app.py` for the dashboard. (Charting views are intentionally left blank so you can implement your own.)
+
+## Objective (Topstep Combine)
 
 - Starting balance: $50,000
 - Profit target: +$3,000

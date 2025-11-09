@@ -5,10 +5,13 @@ TopStepAi Main Entry Point
 Loads configuration, authenticates with TopstepX, and initializes the trading system.
 """
 
+import logging
 import os
 import sys
 import json
+from datetime import datetime, timezone
 
+import pandas as pd
 import yaml
 from dotenv import load_dotenv
 
@@ -19,6 +22,7 @@ if PROJECT_ROOT not in sys.path:
 
 from execution.topstepx_client import TopstepXClient
 from data.gold_data import GoldDataPuller
+from monitoring.status_reporter import publish_status_report
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +30,8 @@ load_dotenv()
 # Load config
 with open('config/config.yaml', 'r') as f:
     config = yaml.safe_load(f)
+
+logging.basicConfig(level=logging.INFO)
 
 def main():
     print("TopStepAi Starting...")
@@ -68,7 +74,13 @@ def main():
         gold_puller = GoldDataPuller(client)
         if gold_puller.find_gold_contract():
             timeframes = ["1min", "5min", "15min", "1hour", "1day"]
+            stitch_config = (config.get("data") or {}).get("stitch", {})
+            target_config = stitch_config.get("target_bars", {})
+            days_back = int(stitch_config.get("days_back", 240))
+            warn_threshold = float(stitch_config.get("warn_threshold", 0.9))
+
             bars_per_timeframe = {tf: 20000 for tf in timeframes}
+            target_bars = {tf: int(target_config.get(tf, bars_per_timeframe.get(tf, 20000))) for tf in timeframes}
 
             # Use live feed for official Topstep data; partial bar gives the current interval snapshot.
             gold_puller.collect_candles(
@@ -87,14 +99,42 @@ def main():
                 include_partial_bar=True,
                 include_current=True,
                 min_year=20,
-                target_bars=bars_per_timeframe,
+                days_back=days_back,
+                target_bars=target_bars,
             )
 
             for tf in timeframes:
                 gold_puller.save_candles(timeframe=f"{tf}_chain")
 
+            contract_summary = {}
             if contract_frames:
-                gold_puller.save_contract_candles(contract_frames)
+                contract_summary = gold_puller.save_contract_candles(contract_frames)
+
+            timeframe_summary = {}
+            for tf, df in stitched.items():
+                if df is None or df.empty:
+                    continue
+                start = df["timestamp"].min()
+                end = df["timestamp"].max()
+                timeframe_summary[tf] = {
+                    "rows": int(len(df)),
+                    "start": start.to_pydatetime().isoformat() if pd.notna(start) else None,
+                    "end": end.to_pydatetime().isoformat() if pd.notna(end) else None,
+                }
+
+            status["data_inventory"] = {
+                "as_of": datetime.now(timezone.utc).isoformat(),
+                "days_back": days_back,
+                "warn_threshold": warn_threshold,
+                "timeframes": timeframe_summary,
+                "contracts": contract_summary,
+                "shortfalls": gold_puller.last_shortfall,
+            }
+
+            with open('config/status.json', 'w') as f:
+                json.dump(status, f, indent=2)
+
+            publish_status_report(status, config.get("monitoring", {}))
         else:
             print("No MGC contract found")
 

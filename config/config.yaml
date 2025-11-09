@@ -30,6 +30,15 @@ data:
   historical_path: data/historical/
   live_cache_path: data/live/
   models_path: models/
+  stitch:
+    days_back: 240
+    target_bars:
+      1min: 20000
+      5min: 12000
+      15min: 4000
+      1hour: 5760
+      1day: 240
+    warn_threshold: 0.9
 
 # Monitoring and Alerts
 monitoring:
